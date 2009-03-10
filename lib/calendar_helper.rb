@@ -36,6 +36,7 @@ module CalendarHelper
   #                                           # Defaults to true.
   #   :previous_month_text   => nil           # Displayed left of the month name if set
   #   :next_month_text   => nil               # Displayed right of the month name if set
+  #   :weekday_to_skip => nil                 # do not display a column for this day of the week
   #
   # For more customization, you can pass a code block to this method, that will get one argument, a Date object,
   # and return a values for the individual table cells. The block can return an array, [cell_text, cell_attrs],
@@ -81,7 +82,8 @@ module CalendarHelper
       :accessible => false,
       :show_today => true,
       :previous_month_text => nil,
-      :next_month_text => nil
+      :next_month_text => nil,
+      :weekday_to_skip => nil
     }
     options = defaults.merge options
 
@@ -109,7 +111,8 @@ module CalendarHelper
     cal << %(<th colspan="2">#{options[:next_month_text]}</th>) if options[:next_month_text]
     cal << %(</tr><tr class="#{options[:day_name_class]}">)
     day_names.each do |d|
-      unless d[options[:abbrev]].eql? d
+       next if !options[:weekday_to_skip].nil? && d.match(options[:weekday_to_skip])
+       unless d[options[:abbrev]].eql? d
         cal << "<th scope='col'><abbr title='#{d}'>#{d[options[:abbrev]]}</abbr></th>"
       else
         cal << "<th scope='col'>#{d[options[:abbrev]]}</th>"
@@ -117,6 +120,7 @@ module CalendarHelper
     end
     cal << "</tr></thead><tbody><tr>"
     beginning_of_week(first, first_weekday).upto(first - 1) do |d|
+      next if !options[:weekday_to_skip].nil? && Date::DAYNAMES[d.wday].match(options[:weekday_to_skip])
       cal << %(<td class="#{options[:other_month_class]})
       cal << " weekendDay" if weekend?(d)
       if options[:accessible]
@@ -126,6 +130,7 @@ module CalendarHelper
       end
     end unless first.wday == first_weekday
     first.upto(last) do |cur|
+    unless !options[:weekday_to_skip].nil? && Date::DAYNAMES[cur.wday].match(options[:weekday_to_skip])
       cell_text, cell_attrs = block.call(cur)
       cell_text  ||= cur.mday
       cell_attrs ||= {}
@@ -134,15 +139,18 @@ module CalendarHelper
       cell_attrs[:class] += " today" if (cur == Date.today) and options[:show_today]  
       cell_attrs = cell_attrs.map {|k, v| %(#{k}="#{v}") }.join(" ")
       cal << "<td #{cell_attrs}>#{cell_text}</td>"
+    end
       cal << "</tr><tr>" if cur.wday == last_weekday
     end
     (last + 1).upto(beginning_of_week(last + 7, first_weekday) - 1)  do |d|
-      cal << %(<td class="#{options[:other_month_class]})
-      cal << " weekendDay" if weekend?(d)
-      if options[:accessible]
-        cal << %(">#{d.day}<span class='hidden'> #{Date::MONTHNAMES[d.mon]}</span></td>)
-      else
-        cal << %(">#{d.day}</td>)        
+      unless !options[:weekday_to_skip].nil? && Date::DAYNAMES[d.wday].match(options[:weekday_to_skip])
+        cal << %(<td class="#{options[:other_month_class]})
+        cal << " weekendDay" if weekend?(d)
+        if options[:accessible]
+          cal << %(">#{d.day}<span class='hidden'> #{Date::MONTHNAMES[d.mon]}</span></td>)
+        else
+          cal << %(">#{d.day}</td>)        
+        end
       end
     end unless last.wday == last_weekday
     cal << "</tr></tbody></table>"

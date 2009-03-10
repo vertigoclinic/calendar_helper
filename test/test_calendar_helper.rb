@@ -91,6 +91,10 @@ class CalendarHelperTest < Test::Unit::TestCase
     todays_day = Date.today.day
     assert_no_match %r{today}, calendar_for_this_month(:show_today => false)
   end
+  
+  def test_should_not_show_this_weekday
+    assert_no_match %r{'Monday'}, calendar_for_this_month(:weekday_to_skip => 'Monday')
+  end
 
   # HACK Tried to use assert_select, but it's not made for free-standing
   #      HTML parsing.
